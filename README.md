@@ -22,7 +22,7 @@ cd cpp && make && ./client 1985
 ## Benchmark
 
 | NO | OS   | Server      | Client | Syscall            | Bandwidth| Server Command     | 
-| 1 | ----- | ----------- | ------ | ------------------ | -------- |  ------------------  |
+| ---- | ----- | ----------- | ------ | ------------------ | -------- |  ------------------  |
 | 2 | Linux | c++,100%    | c++,90% | write(one-by-one) | 1172MBps | ./server 1985 false true |
 | 3 | Linux | c++,86%%    | c++,100%| write(big-buffer) | 2016MBps | ./server 1985 false false |
 | 4 | Linux | c++,73%     | c++,99% | writev            | 3576MBps | ./server 1985 true        |
