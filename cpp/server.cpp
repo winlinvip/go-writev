@@ -9,6 +9,10 @@
 #include <string>
 using namespace std;
 
+#define NB_VIDEOS_IN_GROUP 10
+#define VIDEO_SIZE 1024
+#define HEADER_SIZE 12
+
 int srs_send(int fd, char** group, bool use_writev, bool write_one_by_one);
 
 int main(int argc, char** argv)
@@ -80,15 +84,15 @@ int main(int argc, char** argv)
         // for high performance, we send a group of video(to avoid too many syscall),
         // here we send 10 videos as a group.
         while (true) {
-            // @remark for test, each video is 1024 bytes.
-            char* video = new char[1024];
+            // @remark for test, each video is M bytes.
+            char* video = new char[VIDEO_SIZE];
 
-            // @remark for test, each video header is 12bytes.
-            char* header = new char[12];
+            // @remark for test, each video header is M0 bytes.
+            char* header = new char[HEADER_SIZE];
 
-            // @remark for test, each group contains 10 (header+video)s.
-            char** group = new char*[20];
-            for (int i = 0; i < 20; i+= 2) {
+            // @remark for test, each group contains N (header+video)s.
+            char** group = new char*[2 * NB_VIDEOS_IN_GROUP];
+            for (int i = 0; i < 2 * NB_VIDEOS_IN_GROUP; i+= 2) {
                 group[i] = header;
                 group[i + 1] = video;
             }
@@ -109,48 +113,48 @@ int main(int argc, char** argv)
     return 0;
 }
 
-// each group contains 10 (header+video)s.
-//      header is 12bytes.
-//      videos is 1024 bytes.
+// each group contains N (header+video)s.
+//      header is M bytes.
+//      videos is M0 bytes.
 int srs_send(int fd, char** group, bool use_writev, bool write_one_by_one)
 {
     if (use_writev) {
-        iovec iovs[20];
-        for (int i = 0; i < 20; i+=2) {
+        iovec iovs[2 * NB_VIDEOS_IN_GROUP];
+        for (int i = 0; i < 2 * NB_VIDEOS_IN_GROUP; i+=2) {
             iovs[i].iov_base = (char*)group[i];
-            iovs[i].iov_len = 12;
+            iovs[i].iov_len = HEADER_SIZE;
 
             iovs[i].iov_base = (char*)group[i + 1];
-            iovs[i].iov_len = 1024;
+            iovs[i].iov_len = VIDEO_SIZE;
         }
 
-        return writev(fd, iovs, 20);
+        return writev(fd, iovs, 2 * NB_VIDEOS_IN_GROUP);
     }
 
     // use write, send one by one packet.
     // @remark avoid memory copy, but with lots of syscall, hurts performance.
     if (write_one_by_one) {
-        for (int i = 0; i < 20; i+=2) {
-            if (::write(fd, group[i], 12) == -1) {
+        for (int i = 0; i < 2 * NB_VIDEOS_IN_GROUP; i+=2) {
+            if (::write(fd, group[i], HEADER_SIZE) == -1) {
                 return -1;
             }
 
-            if (::write(fd, group[i + 1], 1024) == -1) {
+            if (::write(fd, group[i + 1], VIDEO_SIZE) == -1) {
                 return -1;
             }
         }
     }
 
     // use write, to avoid lots of syscall, we copy to a big buffer.
-    char* buf = new char[10 * (12 + 1024)];
+    char* buf = new char[NB_VIDEOS_IN_GROUP * (HEADER_SIZE + VIDEO_SIZE)];
 
     int nn = 0;
-    for (int i = 0; i < 20; i+=2) {
-        memcpy(buf + nn, group[i], 12);
-        nn += 12;
+    for (int i = 0; i < 2 * NB_VIDEOS_IN_GROUP; i+=2) {
+        memcpy(buf + nn, group[i], HEADER_SIZE);
+        nn += HEADER_SIZE;
 
-        memcpy(buf + nn, group[i + 1], 1024);
-        nn += 1024;
+        memcpy(buf + nn, group[i + 1], VIDEO_SIZE);
+        nn += VIDEO_SIZE;
     }
 
     nn = ::write(fd, buf, nn);
