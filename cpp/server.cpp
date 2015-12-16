@@ -9,8 +9,8 @@
 #include <string>
 using namespace std;
 
-#define NB_VIDEOS_IN_GROUP 10
-#define VIDEO_SIZE 1024
+#define NB_VIDEOS_IN_GROUP 512
+#define VIDEO_SIZE 4096
 #define HEADER_SIZE 12
 
 int srs_send(int fd, char** group, bool use_writev, bool write_one_by_one);
@@ -124,8 +124,8 @@ int srs_send(int fd, char** group, bool use_writev, bool write_one_by_one)
             iovs[i].iov_base = (char*)group[i];
             iovs[i].iov_len = HEADER_SIZE;
 
-            iovs[i].iov_base = (char*)group[i + 1];
-            iovs[i].iov_len = VIDEO_SIZE;
+            iovs[i+1].iov_base = (char*)group[i + 1];
+            iovs[i+1].iov_len = VIDEO_SIZE;
         }
 
         return writev(fd, iovs, 2 * NB_VIDEOS_IN_GROUP);
