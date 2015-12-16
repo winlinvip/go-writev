@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"net"
+	"runtime"
 )
 
 const(
@@ -40,6 +41,9 @@ func main() {
 		fmt.Println("   ", os.Args[0], "1985 false false")
 		os.Exit(-1)
 	}
+
+	runtime.GOMAXPROCS(4)
+	fmt.Println("always use 4 cpus")
 
 	fmt.Println(fmt.Sprintf("listen at tcp://%v, use writev %v", port, useWritev))
 	if (!useWritev) {
