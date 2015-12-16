@@ -143,6 +143,7 @@ int srs_send(int fd, char** group, bool use_writev, bool write_one_by_one)
                 return -1;
             }
         }
+        return 0
     }
 
     // use write, to avoid lots of syscall, we copy to a big buffer.

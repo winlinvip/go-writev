@@ -19,4 +19,13 @@ cd golang && go build . && ./golang 1985 false true
 cd cpp && make && ./client 1985
 ```
 
+## Benchmark
+
+| OS | Server | Client | Syscall | Bandwidth | Server Command | 
+| --- | ----- | ------ | ------- | --------- |  -----------  |
+| Linux | c++,100% | c++,90% | write(one-by-one) | 1372MBps | ./server 1985 false true |
+| Linux | c++,86%% | c++,100% | write(big-buffer) | 2016MBps | ./server 1985 false false |
+| Linux | c++,73%  | c++,99% | writev        |  3576MBps | ./server 1985 true |
+
+
 Winlin 2015
