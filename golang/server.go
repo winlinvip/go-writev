@@ -30,14 +30,14 @@ func main() {
 		writeOneByOne = os.Args[2] == "true"
 	}
 	if len(os.Args) < 3 || (!useWritev && len(os.Args) < 4) {
-		fmt.Println("Usage:", os.Args[0], " <port> <use_writev> [write_one_by_one]")
+		fmt.Println("Usage:", os.Args[0], "<port> <use_writev> [write_one_by_one]")
 		fmt.Println("   port: the tcp listen port.")
 		fmt.Println("   use_writev: whether use writev. true or false.")
 		fmt.Println("   write_one_by_one: for write(not writev), whether send packet one by one.")
 		fmt.Println("Fox example:")
-		fmt.Println("   ", os.Args[0], " 1985 true")
-		fmt.Println("   ", os.Args[0], " 1985 false true")
-		fmt.Println("   ", os.Args[0], " 1985 false false")
+		fmt.Println("   ", os.Args[0], "1985 true")
+		fmt.Println("   ", os.Args[0], "1985 false true")
+		fmt.Println("   ", os.Args[0], "1985 false false")
 		os.Exit(-1)
 	}
 
@@ -47,7 +47,7 @@ func main() {
 	}
 
 	var addr *net.TCPAddr
-	if addr, err = net.ResolveTCPAddr("tcp4", "0.0.0.0"); err != nil {
+	if addr, err = net.ResolveTCPAddr("tcp4", fmt.Sprintf("0.0.0.0:%v", port)); err != nil {
 		panic(err)
 	}
 
