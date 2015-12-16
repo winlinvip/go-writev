@@ -28,7 +28,7 @@ func main() {
 		writeOneByOne = false
 	}
 	if !useWritev && len(os.Args) >= 4 {
-		writeOneByOne = os.Args[2] == "true"
+		writeOneByOne = os.Args[3] == "true"
 	}
 	if len(os.Args) < 3 || (!useWritev && len(os.Args) < 4) {
 		fmt.Println("Usage:", os.Args[0], "<port> <use_writev> [write_one_by_one]")
