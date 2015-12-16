@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/uio.h>
+#include <string.h>
 
 #include <string>
 using namespace std;
