@@ -125,6 +125,9 @@ func main() {
 	}
 }
 
+// use write, to avoid lots of syscall, we copy to a big buffer.
+var bigBuffer []byte = make([]byte, NbVideosInGroup * (HeaderSize + VideoSize))
+
 // each group contains N (header+video)s.
 //      header is M bytes.
 //      videos is M0 bytes.
@@ -145,17 +148,14 @@ func srs_send(conn *net.TCPConn, group [][]byte, useWritev, writeOneByOne bool) 
 		return
 	}
 
-	// use write, to avoid lots of syscall, we copy to a big buffer.
-	buf := make([]byte, NbVideosInGroup * (HeaderSize + VideoSize))
-
 	var nn int
 	for i := 0; i < 2 * NbVideosInGroup; i++ {
 		b := group[i]
-		copy(buf[nn:nn + len(b)], b)
+		copy(bigBuffer[nn:nn + len(b)], b)
 		nn += len(b)
 	}
 
-	if _,err = conn.Write(buf); err != nil {
+	if _,err = conn.Write(bigBuffer); err != nil {
 		return
 	}
 	return;
