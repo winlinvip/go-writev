@@ -29,7 +29,7 @@ func main() {
 
 	// use signal kill to profile and quit.
 	c := make(chan os.Signal)
-	signal.Notify(c, os.Kill)
+	signal.Notify(c, os.Interrupt)
 	go func(){
 		<- c
 
