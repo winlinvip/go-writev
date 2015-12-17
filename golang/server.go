@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"net"
 	"runtime"
+	"runtime/pprof"
+	"os/signal"
 )
 
 const(
@@ -17,6 +19,30 @@ const(
 func main() {
 	var err error
 	fmt.Println("golang version streaming server.")
+
+	// always start profile.
+	if w,err := os.Create("cpu.prof"); err != nil {
+		panic(err)
+	} else if err := pprof.StartCPUProfile(w); err != nil {
+		panic(err)
+	}
+
+	// use signal kill to profile and quit.
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Kill)
+	go func(){
+		<- c
+
+		pprof.StopCPUProfile()
+
+		if w,err := os.Create("mem.prof"); err != nil {
+			panic(err)
+		} else if err := pprof.Lookup("heap").WriteTo(w, 0); err != nil {
+			panic(err)
+		}
+
+		os.Exit(0)
+	}()
 
 	var port int
 	var useWritev, writeOneByOne bool
