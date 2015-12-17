@@ -8,6 +8,9 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"os/signal"
+	"reflect"
+	"syscall"
+	"unsafe"
 )
 
 const(
@@ -133,8 +136,7 @@ var bigBuffer []byte = make([]byte, NbVideosInGroup * (HeaderSize + VideoSize))
 //      videos is M0 bytes.
 func srs_send(conn *net.TCPConn, group [][]byte, useWritev, writeOneByOne bool) (err error) {
 	if (useWritev) {
-		panic("not support writev right now")
-		return
+		return writev(conn, group)
 	}
 
 	// use write, send one by one packet.
@@ -159,4 +161,41 @@ func srs_send(conn *net.TCPConn, group [][]byte, useWritev, writeOneByOne bool) 
 		return
 	}
 	return;
+}
+
+func writev(c *net.TCPConn, g [][]byte) (err error) {
+	var fc reflect.Value
+	if fc = reflect.ValueOf(c); fc.Kind() == reflect.Ptr {
+		fc = fc.Elem()
+	}
+
+	var ffd reflect.Value = fc.FieldByName("fd")
+	if ffd.Kind() == reflect.Ptr {
+		ffd = ffd.Elem()
+	}
+
+	var fsysfd reflect.Value = ffd.FieldByName("sysfd")
+	if fsysfd.Kind() == reflect.Ptr {
+		fsysfd = fsysfd.Elem()
+	}
+
+	fd := uintptr(fsysfd.Int())
+	//fmt.Println("fd is", fd)
+
+	iovs := make([]syscall.Iovec, len(g))
+	for i, iov := range g {
+		iovs[i] = syscall.Iovec{&iov[0], uint64(len(iov))}
+	}
+
+	iovsPtr := uintptr(unsafe.Pointer(&iovs[0]))
+	iovsLen := uintptr(len(iovs))
+
+	_, _, e0 := syscall.Syscall(syscall.SYS_WRITEV, fd, iovsPtr, iovsLen)
+	if e0 != 0 {
+		if e0 != syscall.EAGAIN {
+			panic(fmt.Sprintf("writev failed %v", e0))
+		}
+	}
+
+	return
 }
