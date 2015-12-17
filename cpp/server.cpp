@@ -103,7 +103,7 @@ int main(int argc, char** argv)
             delete[] group;
             delete[] header;
             if (sent == -1) {
-                printf("sendout the video group failed.\n");
+                printf("sendout the video group failed, client closed?\n");
                 ::close(client);
                 break;
             }
