@@ -8,9 +8,6 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"os/signal"
-	"reflect"
-	"syscall"
-	"unsafe"
 )
 
 const(
@@ -164,38 +161,8 @@ func srs_send(conn *net.TCPConn, group [][]byte, useWritev, writeOneByOne bool) 
 }
 
 func writev(c *net.TCPConn, g [][]byte) (err error) {
-	var fc reflect.Value
-	if fc = reflect.ValueOf(c); fc.Kind() == reflect.Ptr {
-		fc = fc.Elem()
+	if _,err = c.Writev(g); err != nil {
+		panic(err)
 	}
-
-	var ffd reflect.Value = fc.FieldByName("fd")
-	if ffd.Kind() == reflect.Ptr {
-		ffd = ffd.Elem()
-	}
-
-	var fsysfd reflect.Value = ffd.FieldByName("sysfd")
-	if fsysfd.Kind() == reflect.Ptr {
-		fsysfd = fsysfd.Elem()
-	}
-
-	fd := uintptr(fsysfd.Int())
-	//fmt.Println("fd is", fd)
-
-	iovs := make([]syscall.Iovec, len(g))
-	for i, iov := range g {
-		iovs[i] = syscall.Iovec{&iov[0], uint64(len(iov))}
-	}
-
-	iovsPtr := uintptr(unsafe.Pointer(&iovs[0]))
-	iovsLen := uintptr(len(iovs))
-
-	_, _, e0 := syscall.Syscall(syscall.SYS_WRITEV, fd, iovsPtr, iovsLen)
-	if e0 != 0 {
-		if e0 != syscall.EAGAIN {
-			panic(fmt.Sprintf("writev failed %v", e0))
-		}
-	}
-
 	return
 }
