@@ -11,6 +11,15 @@ This program use a tcp server and client to profile the writev, the arch is:
 +--------+             +---------+
 ```
 
+To use private TCPConn.Writev from [winlin](https://github.com/winlinvip/go/tree/go1.5-writev):
+
+```
+mkdir -p $GOPATH/src/github.com/winlinvip && cd $GOPATH/src/github.com/winlinvip &&
+if [[ ! -d go/src ]]; then echo "get writev go."; git clone https://github.com/winlinvip/go; fi &&
+cd go && git checkout go1.5-writev && cd $GOROOT/src && sudo mv net net.`date +%s` && 
+sudo ln -sf $GOPATH/src/github.com/winlinvip/go/src/net
+```
+
 To start the tcp server, use write to send tcp packets:
 
 ```
