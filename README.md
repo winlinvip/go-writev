@@ -47,7 +47,7 @@ Remarks:
 
 1. Profile: Both server and client will write cpu(cpu.prof) and memory(mem.prof) profile, 
 user can use `go tool pprof $GOPATH/bin/tcpserver cpu.prof` to profile it.
-1. GO sdk: Please use private implementation for [writev](https://github.com/winlinvip/go/pull/1#issuecomment-165943222).
+1. GO sdk: Please use go1.5 and private implementation for [writev](https://github.com/winlinvip/go/pull/1#issuecomment-165943222).
 1. Fast build: User can rebuild the golang sdk for this program by `cd $GOPATH/src/github.com/winlinvip/go-writev/tcpserver && go build -a .`
 
 ## Benchmark
