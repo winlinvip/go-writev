@@ -14,19 +14,24 @@ This program use a tcp server and client to profile the writev, the arch is:
 To start the tcp server, use write to send tcp packets:
 
 ```
-go get github.com/winlinvip/go-writev/tcpserver && $GOPATH/bin/tcpserver write
+go get -d github.com/winlinvip/go-writev/tcpserver && 
+cd $GOPATH/src/github.com/winlinvip/go-writev/tcpserver && go build -a . &&
+./tcpserver --port=1985 --writev=false
 ```
 
 Or use writev to send:
 
 ```
-go get github.com/winlinvip/go-writev/tcpserver && $GOPATH/bin/tcpserver writev
+go get -d github.com/winlinvip/go-writev/tcpserver && 
+cd $GOPATH/src/github.com/winlinvip/go-writev/tcpserver && go build -a . &&
+./tcpserver --port=1985 --writev=true
 ```
 
 Then, please start the client to recv tcp packets:
 
 ```
 go get github.com/winlinvip/go-writev/tcpclient && 
+$GOPATH/bin/tcpserver --port=1985
 ```
 
 Remarks:
