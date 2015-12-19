@@ -31,7 +31,7 @@ Then, please start the client to recv tcp packets:
 
 ```
 go get github.com/winlinvip/go-writev/tcpclient && 
-$GOPATH/bin/tcpserver --port=1985
+$GOPATH/bin/tcpclient --port=1985
 ```
 
 Remarks:
