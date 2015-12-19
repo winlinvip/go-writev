@@ -10,7 +10,11 @@ import (
 	"net"
 	"os/signal"
 	"runtime/pprof"
+	"time"
+	"runtime/debug"
 )
+
+var bytesWritten uint64
 
 func main() {
 	fmt.Println("the tcp server prototype for go-writev")
@@ -25,9 +29,10 @@ func main() {
 	var headerSize = flag.Int("header", 12, "the size of header")
 	var payloadSize = flag.Int("payload", 1024, "the size of payload")
 	var tcpNoDelay = flag.Bool("nodelay", false, "set TCP_NODELAY for connection.")
+	var traceInterval = flag.Int("trace", 3, "the trace interval in seconds.")
 
 	flag.Usage = func(){
-		fmt.Println(fmt.Sprintf("Usage: %v [--port=int] [--writev=bool] [--cpus=int] [--cpup=string] [--memp=string] [--group=int] [--header=int] [--payload=int] [-h|--help]", os.Args[0]))
+		fmt.Println(fmt.Sprintf("Usage: %v [--port=int] [--writev=bool] [--cpus=int] [--cpup=string] [--memp=string] [--group=int] [--header=int] [--payload=int] [--trace=int] [-h|--help]", os.Args[0]))
 		fmt.Println(fmt.Sprintf("	port, the listen port. default 1985"))
 		fmt.Println(fmt.Sprintf("	writev, whether use writev to send. default false(use write)"))
 		fmt.Println(fmt.Sprintf("	cpus, the cpus to use. default 1"))
@@ -37,6 +42,7 @@ func main() {
 		fmt.Println(fmt.Sprintf("	header, the size of header. default 12"))
 		fmt.Println(fmt.Sprintf("	payload, the size of payload. default 1024"))
 		fmt.Println(fmt.Sprintf("	nodelay, set the TCP_NODELAY to. default false"))
+		fmt.Println(fmt.Sprintf("	trace, the trace interval in seconds. default 3"))
 		fmt.Println(fmt.Sprintf("	help, show this help and exit"))
 		fmt.Println(fmt.Sprintf("Remark:"))
 		fmt.Println(fmt.Sprintf("	use SIGINT or ctrl+c to interrupt program and collect cpu/mem profile data."))
@@ -72,6 +78,29 @@ func main() {
 		fmt.Println("go tool pprof", os.Args[0], *memProfile)
 		os.Exit(0)
 	}()
+
+	// trace the performance.
+	go func() {
+		var previous uint64
+		sample := time.Now()
+		stat := &debug.GCStats{}
+		for {
+			diff := bytesWritten - previous
+			elapse := time.Now().Sub(sample) / time.Millisecond
+			if (diff > 0 && elapse > 0) {
+				mbps := float64(diff) * 8 / float64(elapse) / 1000
+				debug.ReadGCStats(stat)
+				if len(stat.Pause) > 3 {
+					stat.Pause = append([]time.Duration{}, stat.Pause[:3]...)
+				}
+				fmt.Println(fmt.Sprintf("%.2fMbps, gc %v %v", mbps, stat.NumGC, stat.Pause))
+			}
+			previous = bytesWritten
+			sample = time.Now()
+
+			time.Sleep(time.Second * time.Duration(*traceInterval))
+		}
+	} ()
 
 	var err error
 	var l *net.TCPListener
@@ -125,9 +154,11 @@ func srs_serve(c *net.TCPConn, nodelay, writev bool, group [][]byte) (err error)
 	if (!writev) {
 		for {
 			for _,b := range group {
-				if _,err = c.Write(b); err != nil {
+				var nn int
+				if nn,err = c.Write(b); err != nil {
 					return
 				}
+				bytesWritten += uint64(nn)
 			}
 		}
 		return
@@ -135,9 +166,11 @@ func srs_serve(c *net.TCPConn, nodelay, writev bool, group [][]byte) (err error)
 
 	// use writev to send group.
 	for {
-		if _,err = c.Writev(group); err != nil {
+		var nn int
+		if nn,err = c.Writev(group); err != nil {
 			return
 		}
+		bytesWritten += uint64(nn)
 	}
 	return
 }
