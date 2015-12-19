@@ -40,26 +40,28 @@ func main() {
 
 	wg := sync.WaitGroup{}
 	wg.Add(*nbClients)
-	go func() {
-		defer wg.Done()
+	for i := 0; i < *nbClients; i++ {
+		go func() {
+			defer wg.Done()
 
-		var err error
-		var addr *net.TCPAddr
-		if addr,err = net.ResolveTCPAddr("tcp", fmt.Sprintf("%v:%v", *server, *port)); err != nil {
-			panic(err)
-		}
-		var c *net.TCPConn
-		if c,err = net.DialTCP("tcp", nil, addr); err != nil {
-			panic(err)
-		}
-
-		for {
-			if _,err = io.Copy(ioutil.Discard, c); err != nil {
-				fmt.Println("ignore client err", err)
-				break
+			var err error
+			var addr *net.TCPAddr
+			if addr,err = net.ResolveTCPAddr("tcp", fmt.Sprintf("%v:%v", *server, *port)); err != nil {
+				panic(err)
 			}
-		}
-	} ()
+			var c *net.TCPConn
+			if c,err = net.DialTCP("tcp", nil, addr); err != nil {
+				panic(err)
+			}
+
+			for {
+				if _,err = io.Copy(ioutil.Discard, c); err != nil {
+					fmt.Println("ignore", i, "client err", err)
+					break
+				}
+			}
+		} ()
+	}
 	wg.Wait()
-	fmt.Println("all clients quit.")
+	fmt.Println("all", *nbClients, "clients quit.")
 }
