@@ -12,6 +12,7 @@ import (
 	"runtime/pprof"
 	"time"
 	"runtime/debug"
+	"bufio"
 )
 
 var bytesWritten uint64
@@ -152,13 +153,24 @@ func srs_serve(c *net.TCPConn, nodelay, writev bool, group [][]byte) (err error)
 
 	// use write, send one by one packet.
 	if (!writev) {
+		// use bufio to cache and flush the group.
+		var s int
+		for _,b := range group {
+			s += len(b)
+		}
+		w := bufio.NewWriterSize(c, s)
+		// write to bufio and flush iovecs.
 		for {
 			for _,b := range group {
 				var nn int
-				if nn,err = c.Write(b); err != nil {
+				if nn,err = w.Write(b); err != nil {
 					return
 				}
 				bytesWritten += uint64(nn)
+			}
+
+			if err = w.Flush(); err != nil {
+				return
 			}
 		}
 		return
