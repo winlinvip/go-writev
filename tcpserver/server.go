@@ -114,39 +114,18 @@ func main() {
 	}
 	fmt.Println("listen at", fmt.Sprintf("tcp://%v", addr))
 
-	// create group of tcp packets to send.
-	// each group is a serial of header and payload,
-	// 		group = h0, p0, h1, p1, ..., hN, pN
-	group := make([][]byte, *groupSize * 2)
-	for i := 0; i < len(group); i += 2 {
-		// create header.
-		header := make([]byte, *headerSize)
-		for j,_ := range header {
-			header[j] = 0xf0 + byte(i) + byte(j)
-		}
-		// create payload
-		payload := make([]byte, *payloadSize)
-		for j,_ := range payload {
-			payload[j] = 0x0f + byte(i) + byte(j)
-		}
-		// the group contains N*(header, payload)
-		// h0, p0, h1, p1, ..., hN, pN
-		group[i] = header
-		group[i+1]=payload
-	}
-
 	for {
 		var c *net.TCPConn
 		if c,err = l.AcceptTCP(); err != nil {
 			panic(err)
 		}
-		if err = srs_serve(c, *tcpNoDelay, *useWritev, group); err != nil {
+		if err = srs_serve(c, *tcpNoDelay, *useWritev, *groupSize, *headerSize, *payloadSize); err != nil {
 			fmt.Println("ignore serve client err", err)
 		}
 	}
 }
 
-func srs_serve(c *net.TCPConn, nodelay, writev bool, group [][]byte) (err error) {
+func srs_serve(c *net.TCPConn, nodelay, writev bool, groupSize, headerSize, payloadSize int) (err error) {
 	c.SetNoDelay(nodelay)
 	fmt.Println(fmt.Sprintf("serve %v with TCP_NODELAY:%v", c.RemoteAddr(), nodelay))
 	defer fmt.Println(fmt.Sprintf("server %v ok", c.RemoteAddr()))
@@ -154,13 +133,11 @@ func srs_serve(c *net.TCPConn, nodelay, writev bool, group [][]byte) (err error)
 	// use write, send one by one packet.
 	if (!writev) {
 		// use bufio to cache and flush the group.
-		var s int
-		for _,b := range group {
-			s += len(b)
-		}
-		w := bufio.NewWriterSize(c, s)
+		w := bufio.NewWriterSize(c, 2 * groupSize)
 		// write to bufio and flush iovecs.
 		for {
+			group := srs_recv_group_packets(groupSize, headerSize, payloadSize)
+
 			for _,b := range group {
 				var nn int
 				if nn,err = w.Write(b); err != nil {
@@ -178,6 +155,8 @@ func srs_serve(c *net.TCPConn, nodelay, writev bool, group [][]byte) (err error)
 
 	// use writev to send group.
 	for {
+		group := srs_recv_group_packets(groupSize, headerSize, payloadSize)
+
 		var nn int
 		if nn,err = c.Writev(group); err != nil {
 			return
@@ -185,4 +164,23 @@ func srs_serve(c *net.TCPConn, nodelay, writev bool, group [][]byte) (err error)
 		bytesWritten += uint64(nn)
 	}
 	return
+}
+
+func srs_recv_group_packets(groupSize, headerSize, payloadSize int) ([][]byte) {
+	// create group of tcp packets to send.
+	// each group is a serial of header and payload,
+	// 		group = h0, p0, h1, p1, ..., hN, pN
+	group := make([][]byte, groupSize * 2)
+	for i := 0; i < len(group); i += 2 {
+		// create header.
+		header := make([]byte, headerSize)
+		// create payload
+		payload := make([]byte, payloadSize)
+		// the group contains N*(header, payload)
+		// h0, p0, h1, p1, ..., hN, pN
+		group[i] = header
+		group[i+1]=payload
+	}
+
+	return group
 }
