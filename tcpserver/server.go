@@ -133,7 +133,7 @@ func srs_serve(c *net.TCPConn, nodelay, writev bool, groupSize, headerSize, payl
 	// use write, send one by one packet.
 	if (!writev) {
 		// use bufio to cache and flush the group.
-		w := bufio.NewWriterSize(c, 2 * groupSize)
+		w := bufio.NewWriterSize(c, 2 * groupSize * (headerSize + payloadSize))
 		// write to bufio and flush iovecs.
 		for {
 			group := srs_recv_group_packets(groupSize, headerSize, payloadSize)
