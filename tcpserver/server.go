@@ -119,9 +119,12 @@ func main() {
 		if c,err = l.AcceptTCP(); err != nil {
 			panic(err)
 		}
-		if err = srs_serve(c, *tcpNoDelay, *useWritev, *groupSize, *headerSize, *payloadSize); err != nil {
-			fmt.Println("ignore serve client err", err)
-		}
+		// support concurrency for each client.
+		go func() {
+			if err = srs_serve(c, *tcpNoDelay, *useWritev, *groupSize, *headerSize, *payloadSize); err != nil {
+				fmt.Println("ignore serve client err", err)
+			}
+		}()
 	}
 }
 
