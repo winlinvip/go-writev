@@ -122,6 +122,9 @@ func main() {
 		}
 	}()
 
+	// let all GC out of this benchmark.
+	group := srs_recv_group_packets(groupSize, headerSize, payloadSize)
+
 	for {
 		var c *net.TCPConn
 		if c,err = l.AcceptTCP(); err != nil {
@@ -129,48 +132,45 @@ func main() {
 		}
 		// support concurrency for each client.
 		go func() {
-			if err = srs_serve(c, *tcpNoDelay, *useWritev, *groupSize, *headerSize, *payloadSize, cnn); err != nil {
+			if err = srs_serve(c, *tcpNoDelay, *useWritev, group, cnn); err != nil {
 				fmt.Println("ignore serve client err", err)
 			}
 		}()
 	}
 }
 
-func srs_serve(c *net.TCPConn, nodelay, writev bool, groupSize, headerSize, payloadSize int, cnn chan int) (err error) {
+func srs_serve(c *net.TCPConn, nodelay, writev bool, group [][]byte, cnn chan int) (err error) {
 	c.SetNoDelay(nodelay)
 	fmt.Println(fmt.Sprintf("serve %v with TCP_NODELAY:%v", c.RemoteAddr(), nodelay))
 	defer fmt.Println(fmt.Sprintf("server %v ok", c.RemoteAddr()))
 
-	// let all GC out of this benchmark.
-	group := srs_recv_group_packets(groupSize, headerSize, payloadSize)
+	var nn int
+	for _,b := range group {
+		nn += len(b)
+	}
 
 	// use write, send one by one packet.
 	if (!writev) {
 		// use bufio to cache and flush the group.
-		w := bufio.NewWriterSize(c, 2 * groupSize * (headerSize + payloadSize))
+		w := bufio.NewWriterSize(c, nn)
 		// write to bufio and flush iovecs.
 		for {
-			var nn int
 			for _,b := range group {
-				var n int
-				if n,err = w.Write(b); err != nil {
+				if _,err = w.Write(b); err != nil {
 					return
 				}
-				nn += n
 			}
-			cnn <- nn
-
 			if err = w.Flush(); err != nil {
 				return
 			}
+			cnn <- nn
 		}
 		return
 	}
 
 	// use writev to send group.
 	for {
-		var nn int
-		if nn,err = c.Writev(group); err != nil {
+		if _,err = c.Writev(group); err != nil {
 			return
 		}
 		cnn <- nn
