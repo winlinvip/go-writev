@@ -114,6 +114,14 @@ func main() {
 	}
 	fmt.Println("listen at", fmt.Sprintf("tcp://%v", addr))
 
+	// collect the bytes written.
+	cnn := make(chan int, 64)
+	go func(){
+		for nn := range cnn {
+			bytesWritten += uint64(nn)
+		}
+	}()
+
 	for {
 		var c *net.TCPConn
 		if c,err = l.AcceptTCP(); err != nil {
@@ -121,14 +129,14 @@ func main() {
 		}
 		// support concurrency for each client.
 		go func() {
-			if err = srs_serve(c, *tcpNoDelay, *useWritev, *groupSize, *headerSize, *payloadSize); err != nil {
+			if err = srs_serve(c, *tcpNoDelay, *useWritev, *groupSize, *headerSize, *payloadSize, cnn); err != nil {
 				fmt.Println("ignore serve client err", err)
 			}
 		}()
 	}
 }
 
-func srs_serve(c *net.TCPConn, nodelay, writev bool, groupSize, headerSize, payloadSize int) (err error) {
+func srs_serve(c *net.TCPConn, nodelay, writev bool, groupSize, headerSize, payloadSize int, cnn chan int) (err error) {
 	c.SetNoDelay(nodelay)
 	fmt.Println(fmt.Sprintf("serve %v with TCP_NODELAY:%v", c.RemoteAddr(), nodelay))
 	defer fmt.Println(fmt.Sprintf("server %v ok", c.RemoteAddr()))
@@ -142,13 +150,15 @@ func srs_serve(c *net.TCPConn, nodelay, writev bool, groupSize, headerSize, payl
 		w := bufio.NewWriterSize(c, 2 * groupSize * (headerSize + payloadSize))
 		// write to bufio and flush iovecs.
 		for {
+			var nn int
 			for _,b := range group {
-				var nn int
-				if nn,err = w.Write(b); err != nil {
+				var n int
+				if n,err = w.Write(b); err != nil {
 					return
 				}
-				bytesWritten += uint64(nn)
+				nn += n
 			}
+			cnn <- nn
 
 			if err = w.Flush(); err != nil {
 				return
@@ -163,7 +173,7 @@ func srs_serve(c *net.TCPConn, nodelay, writev bool, groupSize, headerSize, payl
 		if nn,err = c.Writev(group); err != nil {
 			return
 		}
-		bytesWritten += uint64(nn)
+		cnn <- nn
 	}
 	return
 }
