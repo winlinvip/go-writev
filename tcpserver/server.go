@@ -123,7 +123,7 @@ func main() {
 	}()
 
 	// let all GC out of this benchmark.
-	group := srs_recv_group_packets(groupSize, headerSize, payloadSize)
+	group := srs_recv_group_packets(*groupSize, *headerSize, *payloadSize)
 
 	for {
 		var c *net.TCPConn
